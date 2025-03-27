@@ -13,7 +13,7 @@ class e2eNetwork(nn.Module):
     def forward(self, x):
         x = torch.relu(self.fc1(x)) # Make sure to add correct activation functions
         x = torch.relu(self.fc2(x))
-        x = torch.tanh(self.fc3(x)) # Aerial Gym uses tanh for the output layer
+        x = self.fc3(x)
         return x
 
 def convert_network():

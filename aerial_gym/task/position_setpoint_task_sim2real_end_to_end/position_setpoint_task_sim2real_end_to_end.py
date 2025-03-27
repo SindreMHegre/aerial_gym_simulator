@@ -280,16 +280,21 @@ def compute_reward(
 
     prev_target_dist = torch.norm(prev_pos_error, dim=1)
 
-    pos_error[:,2] = pos_error[:,2]*11.
-    pos_reward = torch.sum(exp_func(pos_error[:, :3], 10., 10.0), dim=1) + torch.sum(exp_func(pos_error[:, :3], 2.0, 2.0), dim=1)
+    pos_error[:,2] = pos_error[:,2]*10.
+    pos_reward = torch.sum(exp_func(pos_error[:, :3], 10.1, 10.0), dim=1) + torch.sum(exp_func(pos_error[:, :3], 2.0, 2.0), dim=1)
 
     ups = quat_axis(quats, 2)
     tiltage = 1 - ups[..., 2]
-    upright_reward = exp_func(tiltage, 2.5, 5.0)
+    upright_reward = exp_func(tiltage, 2.5, 5.0) + exp_func(tiltage, 2.5, 2.0)
 
-    forw = quat_axis(quats, 0)
-    alignment = 1 - forw[..., 0]
-    alignment_reward = exp_func(alignment, 4., 5.0) + exp_func(alignment, 2., 2.0)
+    # forw = quat_axis(quats, 0)
+    # alignment = 1 - forw[..., 0]
+    # alignment_reward = exp_func(alignment, 4., 5.0) + exp_func(alignment, 2., 2.0)
+
+    euler = get_euler_xyz_tensor(quats)
+    yaw = euler[:, 2]
+    yaw_reward = exp_func(yaw, 2, 2.0) + exp_func(yaw, 3, 8.0)
+    alignment_reward = yaw_reward
 
     angvel_reward = torch.sum(exp_func(angvels_err, .75 , 10.0), dim=1)
     vel_reward = torch.sum(exp_func(linvels_err, 1., 5.0), dim=1)

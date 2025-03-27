@@ -2,6 +2,11 @@ import numpy as np
 import os
 import yaml
 
+import sys
+
+# Add the correct path to system path
+sys.path.insert(0, '/home/itk/Desktop/dev_sindre/aerial_gym_simulator_sindre')
+
 
 import isaacgym
 

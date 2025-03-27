@@ -10,7 +10,7 @@ if EVAL == False:
         robot_name = "lmf1"
         controller_name = "no_control"
         args = {}
-        num_envs = 8192
+        num_envs = 24
         use_warp = False
         headless = True
         device = "cuda:0"
@@ -41,7 +41,7 @@ else:
         args = {}
         num_envs = 4096
         use_warp = False
-        headless = False
+        headless = True
         device = "cuda:0"
         privileged_observation_space_dim = 0
         action_space_dim = 4
