@@ -135,6 +135,11 @@ if __name__ == "__main__":
         # You can use the last subplot for something else or leave it empty
         # For example, adding setpoint tracking visualization
         # axs[2,1].plot(...)
+        plt.rcParams['font.size'] = 12  # Base font size
+        plt.rcParams['axes.titlesize'] = 14  # Size for axis titles
+        plt.rcParams['axes.labelsize'] = 16  # Size for x and y labels
+        plt.rcParams['legend.fontsize'] = 16  # Size for legends
+
 
         fig, axs = plt.subplots(3, constrained_layout=True)
 
@@ -142,19 +147,22 @@ if __name__ == "__main__":
         axs[0].plot(time_in_seconds, state_array[:, 0:3])
         axs[0].legend([r"$p_x$", r"$p_y$", r"$p_z$"])
         axs[0].set_ylabel(r"Position Error [$m$]")
+        axs[0].set_ylim(-1.6, 1.5)
         # Velocity plot
         axs[1].plot(time_in_seconds, state_array[:, 9:12])
         axs[1].legend([r"$v_x$", r"$v_y$", r"$v_z$"])
         axs[1].set_ylabel(r"Velocity [$\frac{m}{s}$]")
+        axs[1].set_ylim(-1.8, 1.5)
         # Actions plot - motor thrust
-        action_array = np.clip(action_array, -1, 1)
-        axs[2].plot(time_in_seconds, (action_array+1)/2)
+        action_array = np.clip(action_array, -0.95, 0.95)
+        axs[2].plot(time_in_seconds, (action_array*3) + 3)
         axs[2].set_xlabel(r"Time [$s$]")  # Changed from steps to s
-        axs[2].set_ylabel(r"Motor Thrust [% of max]")
+        axs[2].set_ylabel(r"Motor Thrust [$N$]")
         axs[2].legend([r"$u_1$", r"$u_2$", r"$u_3$", r"$u_4$"])
+        axs[2].set_ylim(0, 6)
 
         # Add a title to the figure
-        fig.suptitle("Drone Control Simulation", fontsize=16)
+        fig.suptitle("Neural Control in Simulation", fontsize=20)
 
         # Save with high resolution
         plt.savefig("simulation_plots.png", dpi=300, bbox_inches='tight')

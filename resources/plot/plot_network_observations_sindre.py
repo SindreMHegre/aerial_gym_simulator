@@ -84,7 +84,7 @@ if __name__ == "__main__":
     lin_vel_interp = f_lin_vel(time_points)
     ori_interp = f_ori(time_points)
     ang_vel_interp = f_ang_vel(time_points)
-    m_thrust_interp = f_m_thrust(time_points)
+    m_thrust_interp = f_m_thrust(time_points)*6
 
     k_t = 0.000015
 
@@ -92,6 +92,7 @@ if __name__ == "__main__":
 
     plt.rcParams['text.usetex'] = False
     plt.rcParams['figure.figsize'] = (10, 10)  # Width, height in inches
+    plt.style.use("seaborn-v0_8-colorblind")
 
     # Create a time array that starts at 0 for plotting purposes
     plotting_time = time_points - T_start + 0.8
@@ -121,25 +122,36 @@ if __name__ == "__main__":
     # elif config == "quad":
     #     axs[2,0].legend([r"$u_1$", r"$u_2$", r"$u_3$", r"$u_4$"])
 
-    fig, axs = plt.subplots(3)
+    # Add these with your other plt.rcParams settings
+    plt.rcParams['font.size'] = 12  # Base font size
+    plt.rcParams['axes.titlesize'] = 14  # Size for axis titles
+    plt.rcParams['axes.labelsize'] = 16  # Size for x and y labels
+    plt.rcParams['legend.fontsize'] = 12 # Size for legends
+
+
+    fig, axs = plt.subplots(3, constrained_layout=True)
     axs[0].plot(plotting_time, pos_interp.T)
     axs[0].legend([r"$p_x$", r"$p_y$", r"$p_z$"])
     axs[0].set_ylabel(r"Position Error [$m$]")
-    #axs[0].xlim(0, 30)
+    axs[0].set_ylim(-1.6, 1.5)
+    axs[0].set_yticks(np.arange(-1.5, 1.6, 0.5))
 
     axs[1].plot(plotting_time, lin_vel_interp.T)
     axs[1].legend([r"$v_x$", r"$v_y$", r"$v_z$"])
     axs[1].set_ylabel(r"Velocity [$\frac{m}{s}$]")
+    axs[1].set_ylim(-1.8, 1.5)
+    axs[1].set_yticks(np.arange(-1.5, 1.6, 0.5))
     #axs[2].xlim(0, 30)
 
     axs[2].plot(plotting_time, m_thrust_interp.T)
     axs[2].set_xlabel(r"Time [$s$]")
-    axs[2].set_ylabel(r"Motor Thrust [% of max]")
+    axs[2].set_ylabel(r"Motor Thrust [$N$]")
     axs[2].legend([r"$u_1$", r"$u_2$", r"$u_3$", r"$u_4$"])
+    axs[2].set_ylim(0, 6)
     #axs[2].xlim(0, 30)
 
 
-    fig.suptitle("Neural control in live flight", fontsize=16)
+    fig.suptitle("Neural Control in Live Flight", fontsize=20)
 
 
     plt.savefig(exp_name + "_plot.png", dpi=300, bbox_inches='tight')
