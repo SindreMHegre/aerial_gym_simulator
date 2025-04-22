@@ -2,10 +2,10 @@ import torch
 import torch.nn as nn
 import ai_edge_torch
 
-class e2eNetwork(nn.Module):
+class E2ENetwork(nn.Module):
     def __init__(self):
         # TODO make sure the layers and activation function match the model you have trained
-        super(e2eNetwork, self).__init__()
+        super(E2ENetwork, self).__init__()
         self.fc1 = nn.Linear(15, 64)  # Input layer (15 inputs, position error, velocity, attitude (6D), angular velocity)
         self.fc2 = nn.Linear(64, 32)
         self.fc3 = nn.Linear(32, 4) # Output layer (number of motors)
@@ -33,7 +33,7 @@ def convert_network():
     }
 
     # Initialize the e2eNetwork model
-    e2e_model = e2eNetwork()
+    e2e_model = E2ENetwork()
     e2e_model.load_state_dict(mapped_state_dict)
     e2e_model.eval()
 
