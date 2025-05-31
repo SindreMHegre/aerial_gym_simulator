@@ -20,6 +20,7 @@ if __name__ == "__main__":
     # Load data
     data = pd.read_csv("./ulogs/" + exp_name + "/" + exp_name + "_neural_control_0.csv")
     local_position_data = pd.read_csv("./ulogs/" + exp_name + "/" + exp_name + "_vehicle_local_position_0.csv")
+    cpu_load_data = pd.read_csv("./ulogs/" + exp_name + "/" + exp_name + "_cpuload_0.csv")
 
     # Extract data and remove 0 values from rpm (publishing issue)
     pos_real = np.array([local_position_data["x"].tolist(),local_position_data["y"].tolist(),local_position_data["z"].tolist()])
@@ -59,6 +60,7 @@ if __name__ == "__main__":
 
     time_points = np.array((data["timestamp"].iloc[1:] - start_time))*uorb_timestep_size
     time_points_pos_vel = np.array((local_position_data["timestamp"].iloc[:] - start_time))*uorb_timestep_size
+    time_points_cpu_load = np.array((cpu_load_data["timestamp"].iloc[:] - start_time))*uorb_timestep_size
 
     # Interpolate data
     f_pos_real = interp1d(time_points_pos_vel, pos_enu_real, axis=1)
@@ -67,7 +69,9 @@ if __name__ == "__main__":
     f_ori = interp1d(time_points, ori_euler.T)
     f_ang_vel = interp1d(time_points, ang_vel, axis=1)
     f_m_thrust = interp1d(time_points, m_thrust)
-
+    # Use time_points_cpu_load which matches the length of cpu_load_data
+    f_cpu_load = interp1d(time_points_cpu_load, cpu_load_data["load"].tolist())
+    f_cpu_load_ram = interp1d(time_points_cpu_load, cpu_load_data["ram_usage"].tolist())
 
     sim_dt = 0.01
     T_start = max([time_points[0], time_points_pos_vel[0]])
@@ -85,6 +89,8 @@ if __name__ == "__main__":
     ori_interp = f_ori(time_points)
     ang_vel_interp = f_ang_vel(time_points)
     m_thrust_interp = f_m_thrust(time_points)*6
+    cpu_load_interp = f_cpu_load(time_points)
+    cpu_load_ram_interp = f_cpu_load_ram(time_points)
 
     k_t = 0.000015
 
@@ -150,33 +156,52 @@ if __name__ == "__main__":
     #axs[2].xlim(0, 30)
 
 
-    fig.suptitle("Neural Control in Live Flight", fontsize=20)
+    fig.suptitle("Neural Control in Live Flight on the LMF", fontsize=20)
     plt.savefig(exp_name + "_plot.png", dpi=300, bbox_inches='tight')
     plt.show()
 
     plt.rcParams['figure.figsize'] = (14, 10)  # Width, height in inches
     inference_time_array = np.array(inference_time)  # if not already a numpy array
     controller_time_array = np.array(controller_time)  # if not already a numpy array
+    cpu_load_array = np.array(cpu_load_data["load"].tolist())  # CPU load
+    cpu_load_ram_array = np.array(cpu_load_data["ram_usage"].tolist())  # RAM usage
+
+    # Create time stamps for interpolation
     inference_time_stamps = np.linspace(plotting_time[0], plotting_time[-1], len(inference_time_array))
     controller_time_stamps = np.linspace(plotting_time[0], plotting_time[-1], len(controller_time_array))
+    cpu_load_time_stamps = np.linspace(plotting_time[0], plotting_time[-1], len(cpu_load_array))
+    cpu_load_ram_time_stamps = np.linspace(plotting_time[0], plotting_time[-1], len(cpu_load_ram_array))
 
     # Interpolate to match plotting_time
     f_inference = interp1d(inference_time_stamps, inference_time_array, kind='linear', fill_value="extrapolate")
     f_controller = interp1d(controller_time_stamps, controller_time_array, kind='linear', fill_value="extrapolate")
+    f_cpu_load = interp1d(cpu_load_time_stamps, cpu_load_array, kind='linear', fill_value="extrapolate")
+    f_cpu_load_ram = interp1d(cpu_load_ram_time_stamps, cpu_load_ram_array, kind='linear', fill_value="extrapolate")
 
     inference_interp = f_inference(plotting_time)
     controller_interp = f_controller(plotting_time)
+    cpu_load_interp = f_cpu_load(plotting_time)
+    cpu_load_ram_interp = f_cpu_load_ram(plotting_time)
 
-    # Now plot with matching lengths
-    fig, ax = plt.subplots(constrained_layout=True)
-    ax.plot(plotting_time, inference_interp, label="Inference Time")
-    ax.plot(plotting_time, controller_interp, label="Controller Time")
-    ax.set_xlabel(r"Time [$s$]")
-    ax.set_ylabel(r"Time [$\mu s$]")
-    ax.legend()
+    # Now plot the CPU and timing data
+    fig, axs = plt.subplots(2, constrained_layout=True)
+    axs[0].plot(plotting_time, inference_interp, label="Inference Time")
+    axs[0].plot(plotting_time, controller_interp, label="Controller Time")
+    axs[0].set_ylabel(r"Time [$\mu s$]")
+    axs[0].legend()
 
-    fig.suptitle("Timing", fontsize=20)
-    plt.savefig(exp_name + "_timing_plot.png", dpi=300, bbox_inches='tight')
+    axs[1].plot(plotting_time, cpu_load_interp, label="CPU Load")
+    axs[1].plot(plotting_time, cpu_load_ram_interp, label="RAM Usage")
+    axs[1].set_xlabel(r"Time [$s$]")
+    axs[1].set_ylabel(r"CPU Load [$\%$]")
+    axs[1].legend()
+    axs[1].set_ylim(0.35, 0.55)
+    axs[1].set_yticks(np.arange(0.35, 0.55, 0.02))
+
+    print("Mean CPU Load: ", np.mean(cpu_load_interp))
+
+    fig.suptitle("Timing and CPU Usage on the LMF", fontsize=20)
+    plt.savefig(exp_name + "_timing_cpu_plot.png", dpi=300, bbox_inches='tight')
     plt.show()
 
     from mpl_toolkits.mplot3d import Axes3D

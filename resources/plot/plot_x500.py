@@ -23,6 +23,7 @@ if __name__ == "__main__":
     attitude_data = pd.read_csv("./ulogs/" + exp_name + "/" + exp_name + "_vehicle_attitude_0.csv")
     angular_velocity_data = pd.read_csv("./ulogs/" + exp_name + "/" + exp_name + "_vehicle_angular_velocity_0.csv")
     actuator_motor_data = pd.read_csv("./ulogs/" + exp_name + "/" + exp_name + "_actuator_motors_0.csv")
+    cpu_load_data = pd.read_csv("./ulogs/" + exp_name + "/" + exp_name + "_cpuload_0.csv")
 
     # Extract data and remove 0 values from rpm (publishing issue)
     pos_real = np.array([local_position_data["x"].tolist(),local_position_data["y"].tolist(),local_position_data["z"].tolist()])
@@ -49,6 +50,7 @@ if __name__ == "__main__":
                                  attitude_data["q[2]"].tolist(),attitude_data["q[3]"].tolist()])
     actuator_motors = np.array([actuator_motor_data["control[0]"].tolist(),actuator_motor_data["control[1]"].tolist(),
                                 actuator_motor_data["control[2]"].tolist(),actuator_motor_data["control[3]"].tolist()])
+    cpu_load = np.array([cpu_load_data["load"].tolist(), cpu_load_data["ram_usage"].tolist()])
 
     inference_time = np.array(data["inference_time"].tolist())[1:]
     controller_time = np.array(data["controller_time"].tolist())[1:]
@@ -77,6 +79,7 @@ if __name__ == "__main__":
     time_points_ang_vel = np.array((angular_velocity_data["timestamp"].iloc[:] - start_time))*uorb_timestep_size
     time_points_attitude = np.array((attitude_data["timestamp"].iloc[:] - start_time))*uorb_timestep_size
     time_points_actuator_motors = np.array((actuator_motor_data["timestamp"].iloc[:] - start_time))*uorb_timestep_size
+    time_points_cpu_load = np.array((cpu_load_data["timestamp"].iloc[:] - start_time))*uorb_timestep_size
 
     # Interpolate data
     f_pos_real = interp1d(time_points_pos_vel, pos_enu_real, axis=1)
@@ -90,6 +93,7 @@ if __name__ == "__main__":
     v_angvel = interp1d(time_points_ang_vel, vehicle_angvel)
     v_attitude = interp1d(time_points_attitude, vehicle_ori_euler.T)
     f_actuator_motors = interp1d(time_points_actuator_motors, actuator_motors)
+
 
 
     sim_dt = 0.01
@@ -188,32 +192,48 @@ if __name__ == "__main__":
     #axs[2].xlim(0, 30)
 
 
-    fig.suptitle("Neural Control in Live Flight", fontsize=20)
+    fig.suptitle("Neural Control in Live Flight on the X500", fontsize=20)
     plt.savefig(exp_name + "_plot.png", dpi=300, bbox_inches='tight')
     plt.show()
 
     plt.rcParams['figure.figsize'] = (14, 10)  # Width, height in inches
     inference_time_array = np.array(inference_time)  # if not already a numpy array
     controller_time_array = np.array(controller_time)  # if not already a numpy array
+    cpu_load_array = np.array(cpu_load[0])  # if not already a numpy array
+    cpu_load_ram_array = np.array(cpu_load[1])  # if not already a numpy array
     inference_time_stamps = np.linspace(plotting_time[0], plotting_time[-1], len(inference_time_array))
     controller_time_stamps = np.linspace(plotting_time[0], plotting_time[-1], len(controller_time_array))
+    cpu_load_time_stamps = np.linspace(plotting_time[0], plotting_time[-1], len(cpu_load_array))
+    cpu_load_ram_time_stamps = np.linspace(plotting_time[0], plotting_time[-1], len(cpu_load_ram_array))
+
 
     # Interpolate to match plotting_time
     f_inference = interp1d(inference_time_stamps, inference_time_array, kind='linear', fill_value="extrapolate")
     f_controller = interp1d(controller_time_stamps, controller_time_array, kind='linear', fill_value="extrapolate")
+    f_cpu_load = interp1d(cpu_load_time_stamps, cpu_load_array, kind='linear', fill_value="extrapolate")
+    f_cpu_load_ram = interp1d(cpu_load_ram_time_stamps, cpu_load_ram_array, kind='linear', fill_value="extrapolate")
 
     inference_interp = f_inference(plotting_time)
     controller_interp = f_controller(plotting_time)
+    cpu_load_interp = f_cpu_load(plotting_time)
+    cpu_load_ram_interp = f_cpu_load_ram(plotting_time)
 
     # Now plot with matching lengths
-    fig, ax = plt.subplots(constrained_layout=True)
-    ax.plot(plotting_time, inference_interp, label="Inference Time")
-    ax.plot(plotting_time, controller_interp, label="Controller Time")
-    ax.set_xlabel(r"Time [$s$]")
-    ax.set_ylabel(r"Time [$\mu s$]")
-    ax.legend()
+    fig, axs = plt.subplots(2, constrained_layout=True)
+    axs[0].plot(plotting_time, inference_interp, label="Inference Time")
+    axs[0].plot(plotting_time, controller_interp, label="Controller Time")
+    axs[0].set_ylabel(r"Time [$\mu s$]")
+    axs[0].legend()
 
-    fig.suptitle("Timing", fontsize=20)
+    axs[1].plot(plotting_time, cpu_load_interp, label="CPU Load")
+    axs[1].plot(plotting_time, cpu_load_ram_interp, label="RAM Usage")
+    axs[1].set_xlabel(r"Time [$s$]")
+    axs[1].set_ylabel(r"CPU Load [$\%$]")
+    axs[1].legend()
+    axs[1].set_ylim(0.3, 0.5)
+    axs[1].set_yticks(np.arange(0.3, 0.5, 0.02))
+
+    fig.suptitle("Timing and CPU Usage on the X500", fontsize=20)
     plt.savefig(exp_name + "_timing_plot.png", dpi=300, bbox_inches='tight')
     plt.show()
 
@@ -238,7 +258,7 @@ if __name__ == "__main__":
     axs[2].legend([r"$u_1$", r"$u_2$", r"$u_3$", r"$u_4$"])
     axs[2].set_ylim(-1, 10)
 
-    fig.suptitle("Classical Controllers", fontsize=20)
+    fig.suptitle("Classical Controllers on the X500", fontsize=20)
     plt.savefig(exp_name + "_classical_plot.png", dpi=300, bbox_inches='tight')
     plt.show()
 
@@ -255,7 +275,7 @@ if __name__ == "__main__":
     axs[1].legend([r"$\omega_x$", r"$ω_y$", r"$ω_z$"])
     axs[1].set_xlabel(r"Time [$s$]")
     # axs[1].set_ylim(-1, 1)
-    fig.suptitle("Classical Controllers Attitude", fontsize=20)
+    fig.suptitle("Classical Controllers Attitude on the X500", fontsize=20)
     plt.savefig(exp_name + "_classical_attitude_plot.png", dpi=300, bbox_inches='tight')
     plt.show()
 
@@ -271,7 +291,7 @@ if __name__ == "__main__":
     axs[1].legend([r"$\omega_x$", r"$ω_y$", r"$ω_z$"])
     axs[1].set_xlabel(r"Time [$s$]")
     # axs[1].set_ylim(-1.2, 1.2)
-    fig.suptitle("Neural Control Attitude", fontsize=20)
+    fig.suptitle("Neural Control Attitude on the X500", fontsize=20)
     plt.savefig(exp_name + "_neural_attitude_plot.png", dpi=300, bbox_inches='tight')
     plt.show()
 
